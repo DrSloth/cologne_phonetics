@@ -8,11 +8,14 @@ edition = "2021"
 [features]
 unsafe_opt = []
 
+[profile.release]
+opt-level = 3
+codegen-units = 1
+lto = "fat"
+debug = true
+
 [dependencies]
 
 [[example]]
 name = "cologne_cat"
-opt-level = 3
-codegen-units = 1
-lto = "fat"
 

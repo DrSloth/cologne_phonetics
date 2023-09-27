@@ -1,5 +1,10 @@
 /// Implementation of cologne codes or "Kölner Phonetik" see https://en.wikipedia.org/wiki/Cologne_phonetics
 /// for more information
+
+mod cologne_vec;
+
+pub use cologne_vec::CologneVec;
+
 use std::{fmt::Display, mem};
 
 // This iterates all chars in s but ignores all non german word characters. Besides space.
@@ -29,24 +34,18 @@ macro_rules! array_slide {
     };
 }
 
-pub fn utf8_to_cologne_codes(bytes: &[u8], outbuf: &mut Vec<CologneCode>) {
-    // Naive iteration
-    let mut utf8 = false;
-    // All values are interpreted as a normal alphabetic character and this maps to their alphabet
-    // index, most ascii punctuation and whitespace characters are 26 and count as a stop
-    let mut last = [26, 26];
-    // Wether the previous character was uncertain and is not yet written
-    let mut prev_uncertain = false;
+macro_rules! iter {
+    ($byte: ident, $utf8:ident, $last:ident, $prev_uncertain:ident, $outbuf:ident) => {
+    'blk: {
+        let mut b = $byte;
 
-    for b in bytes {
-        let mut b = *b;
         if b > 0x7F {
-            utf8 = b == GERMAN_SPECIAL_CHAR_FIRST_BYTE;
-            continue;
+            $utf8 = b == GERMAN_SPECIAL_CHAR_FIRST_BYTE;
+            break 'blk;
         }
 
-        if utf8 {
-            utf8 = false;
+        if $utf8 {
+            $utf8 = false;
             match b {
                 GERMAN_AE_SECOND_BYTE => {
                     b = b'A';
@@ -60,18 +59,18 @@ pub fn utf8_to_cologne_codes(bytes: &[u8], outbuf: &mut Vec<CologneCode>) {
                 GERMAN_SZ_SECOND_BYTE => {
                     b = b'Z';
                 }
-                _ => continue,
+                _ => break 'blk,
             }
         }
 
         // Try to uppercase the letters
         b = if b < b'A' {
-            utf8 = false;
+            $utf8 = false;
             26
         } else if b > b'Z' {
             b = b.wrapping_sub(b'a' - b'A');
             if b > b'Z' || b < b'A' {
-                utf8 = false;
+                $utf8 = false;
                 26
             } else {
                 b.wrapping_sub(b'A')
@@ -80,26 +79,26 @@ pub fn utf8_to_cologne_codes(bytes: &[u8], outbuf: &mut Vec<CologneCode>) {
             b.wrapping_sub(b'A')
         };
 
-        if prev_uncertain {
-            prev_uncertain = false;
+        if $prev_uncertain {
+            $prev_uncertain = false;
             // TODO This match can probably be optimized
-            // if last[1] == Idx::D {
-            //     eprintln!("last: {last:?} cur: {b}");
+            // if $last[1] == Idx::D {
+            //     eprintln!("$last: {$last:?} cur: {b}");
             // }
-            match (last[0], last[1], b) {
+            match ($last[0], $last[1], b) {
                 // Uncertain P
                 (_, Idx::P, Idx::H) => {
-                    cologne_code_push(CologneCode::Class3, outbuf);
+                    cologne_code_push(CologneCode::Class3, $outbuf);
                 }
                 (_, Idx::P, _) => {
-                    cologne_code_push(CologneCode::Class1, outbuf);
+                    cologne_code_push(CologneCode::Class1, $outbuf);
                 }
                 // Uncertain T or D
                 (_, Idx::D | Idx::T, Idx::C | Idx::S | Idx::Z) => {
-                    cologne_code_push(CologneCode::Class8, outbuf);
+                    cologne_code_push(CologneCode::Class8, $outbuf);
                 }
                 (_, Idx::D | Idx::T, _) => {
-                    cologne_code_push(CologneCode::Class2, outbuf);
+                    cologne_code_push(CologneCode::Class2, $outbuf);
                 }
                 // Uncertain C
                 (
@@ -107,22 +106,22 @@ pub fn utf8_to_cologne_codes(bytes: &[u8], outbuf: &mut Vec<CologneCode>) {
                     Idx::C,
                     Idx::A | Idx::H | Idx::K | Idx::L | Idx::O | Idx::Q | Idx::R | Idx::U | Idx::X,
                 ) => {
-                    cologne_code_push(CologneCode::Class4, outbuf);
+                    cologne_code_push(CologneCode::Class4, $outbuf);
                 }
                 (Idx::S | Idx::Z, Idx::C, _) => {
-                    cologne_code_push(CologneCode::Class8, outbuf);
+                    cologne_code_push(CologneCode::Class8, $outbuf);
                 }
                 (_, Idx::C, Idx::A | Idx::H | Idx::K | Idx::O | Idx::Q | Idx::U | Idx::X) => {
-                    cologne_code_push(CologneCode::Class8, outbuf);
+                    cologne_code_push(CologneCode::Class8, $outbuf);
                 }
                 (Idx::SPACE, Idx::C, _) => {
-                    cologne_code_push(CologneCode::Class8, outbuf);
+                    cologne_code_push(CologneCode::Class8, $outbuf);
                 }
                 (_, Idx::C, _) => {
-                    cologne_code_push(CologneCode::Class8, outbuf);
+                    cologne_code_push(CologneCode::Class8, $outbuf);
                 }
                 _ => {
-                    unreachable!("prev_uncertain with last: {:?} cur: {}", last, b)
+                    unreachable!("$prev_uncertain with $last: {:?} cur: {}", $last, b)
                 }
             }
         }
@@ -131,36 +130,70 @@ pub fn utf8_to_cologne_codes(bytes: &[u8], outbuf: &mut Vec<CologneCode>) {
             .get(usize::from(b))
             .unwrap_or_else(|| unreachable!());
 
-        // eprintln!("res: {res} b: {b} last: {last:?}");
+        // eprintln!("res: {res} b: {b} $last: {$last:?}");
         match res {
             // Correct code already
             0 => {
                 let c: CologneCode = unsafe { mem::transmute(res) };
-                cologne_code_push(c, outbuf);
+                cologne_code_push(c, $outbuf);
             }
             1..=8 => {
                 let c: CologneCode = unsafe { mem::transmute(res) };
-                cologne_code_push(c, outbuf);
+                cologne_code_push(c, $outbuf);
             }
-            UNCERTAIN_X => match last[1] {
+            UNCERTAIN_X => match $last[1] {
                 Idx::C | Idx::K | Idx::Q => {
-                    cologne_code_push(CologneCode::Class8, outbuf);
+                    cologne_code_push(CologneCode::Class8, $outbuf);
                 }
                 _ => {
-                    cologne_code_push(CologneCode::Class4, outbuf);
-                    cologne_code_push(CologneCode::Class8, outbuf);
+                    cologne_code_push(CologneCode::Class4, $outbuf);
+                    cologne_code_push(CologneCode::Class8, $outbuf);
                 }
             },
             11 => {}
             14 => {
-                cologne_code_push(CologneCode::Space, outbuf);
+                cologne_code_push(CologneCode::Space, $outbuf);
             }
             _ => {
-                prev_uncertain = true;
+                $prev_uncertain = true;
             }
         }
-        array_slide!(last, b);
+        array_slide!($last, b);
     }
+}}
+
+pub fn utf8_to_cologne_codes(bytes: &[u8], outbuf: &mut Vec<CologneCode>) {
+    // Naive iteration
+    let mut utf8 = false;
+    // All values are interpreted as a normal alphabetic character and this maps to their alphabet
+    // index, most ascii punctuation and whitespace characters are 26 and count as a stop
+    let mut last = [26, 26];
+    // Wether the previous character was uncertain and is not yet written
+    let mut prev_uncertain = false;
+
+    // for [a, b, c, d, e, f, g, h] in bytes.chunks_exact(8).map(slice_to_arr) {
+    //     iter!(a, utf8, last, prev_uncertain, outbuf);
+    //     iter!(b, utf8, last, prev_uncertain, outbuf);
+    //     iter!(c, utf8, last, prev_uncertain, outbuf);
+    //     iter!(d, utf8, last, prev_uncertain, outbuf);
+    //     iter!(e, utf8, last, prev_uncertain, outbuf);
+    //     iter!(f, utf8, last, prev_uncertain, outbuf);
+    //     iter!(g, utf8, last, prev_uncertain, outbuf);
+    //     iter!(h, utf8, last, prev_uncertain, outbuf);
+    // }
+
+    // println!("{:?}", outbuf);
+    // for b in &bytes[(bytes.len()-bytes.len() % 8)..] {
+    //     let b = *b;
+    //     iter!(b, utf8, last, prev_uncertain, outbuf);
+    // }
+    for b in bytes {
+        let b = *b;
+        iter!(b, utf8, last, prev_uncertain, outbuf);
+    }
+
+    cologne_code_push(CologneCode::Space, outbuf);
+    outbuf.pop();
 }
 
 fn cologne_code_push(code: CologneCode, outbuf: &mut Vec<CologneCode>) {
@@ -220,9 +253,9 @@ impl Display for CologneCode {
     }
 }
 
-/// SAFETY: Only unsafe if the unsafe_opt feature is on
-fn slice_to_arr<T, const N: usize>(s: &[T]) -> &[T; N] {
-    <&[T] as TryInto<&[T; N]>>::try_into(s).unwrap_or_else(|_| {
+#[inline(always)]
+fn slice_to_arr<const N: usize>(s: &[u8]) -> [u8; N] {
+    *<&[u8] as TryInto<&[u8; N]>>::try_into(s).unwrap_or_else(|_| {
         // SAFETY: only unsafe if unsafe_opt is on
         // unsafe { unreachable() }
         unreachable!()
@@ -282,7 +315,7 @@ mod test {
     }
 
     #[test]
-    fn mueller_luedenscheid() {
+    fn mueller_luedenscheidt() {
         let mut outbuf = Vec::new();
         utf8_to_cologne_codes("Müller-Lüdenscheidt".as_bytes(), &mut outbuf);
         assert_eq!(
@@ -360,9 +393,7 @@ mod test {
         );
         assert_eq!(
             outbuf,
-            vec![
-                CologneCode::Space
-            ]
+            vec![]
         )
     }
 
