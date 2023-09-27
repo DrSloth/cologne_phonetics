@@ -14,12 +14,12 @@ const UNCERTAIN_X: u8 = 13;
 
 #[rustfmt::skip]
 /// Lookups for the cologne codes as numbers uncertain characters are mapped to other numbers:
-/// 9 is 'C', 10 is 'D' or 'T', 11 is 'H', 12 is 'P', 13 is 'X'
-const CHARACTER_TO_CODE: [u8; 26] = [
+/// 9 is 'C', 10 is 'D' or 'T', 11 is 'H', 12 is 'P', 13 is 'X', Space characters are 14
+const CHARACTER_TO_CODE: [u8; 27] = [
     // A  B  C  D  E  F  G  H  I  J  K  L  M
        0, 1, 9, 10,0, 3, 4, 11,0, 0, 4, 5, 6,
-    // N  O  P  Q  R  S  T  U  V  W  X           Y  Z
-       6, 0, 12,0, 7, 8, 10,0, 3, 3, UNCERTAIN_X,0, 8
+    // N  O  P  Q  R  S  T  U  V  W  X           Y  Z  SPACE
+       6, 0, 12,0, 7, 8, 10,0, 3, 3, UNCERTAIN_X,0, 8, 14,
 ];
 
 macro_rules! array_slide {
@@ -39,7 +39,6 @@ pub fn utf8_to_cologne_codes(bytes: &[u8], outbuf: &mut Vec<CologneCode>) {
     let mut prev_uncertain = false;
 
     for b in bytes {
-        let _c = *b;
         let mut b = *b;
         if b > 0x7F {
             utf8 = b == GERMAN_SPECIAL_CHAR_FIRST_BYTE;
@@ -66,28 +65,27 @@ pub fn utf8_to_cologne_codes(bytes: &[u8], outbuf: &mut Vec<CologneCode>) {
         }
 
         // Try to uppercase the letters
-        if b < b'A' {
-            // Stop character
-            array_slide!(last, 26);
-            cologne_code_push(CologneCode::Space, outbuf);
+        b = if b < b'A' {
             utf8 = false;
-            continue;
-        }
-        if b > b'Z' {
+            26
+        } else if b > b'Z' {
             b = b.wrapping_sub(b'a' - b'A');
             if b > b'Z' || b < b'A' {
                 utf8 = false;
-                // Stop character
-                array_slide!(last, 26);
-                cologne_code_push(CologneCode::Space, outbuf);
-                continue;
+                26
+            } else {
+                b.wrapping_sub(b'A')
             }
-        }
-        b = b.wrapping_sub(b'A');
+        } else {
+            b.wrapping_sub(b'A')
+        };
 
         if prev_uncertain {
             prev_uncertain = false;
             // TODO This match can probably be optimized
+            // if last[1] == Idx::D {
+            //     eprintln!("last: {last:?} cur: {b}");
+            // }
             match (last[0], last[1], b) {
                 // Uncertain P
                 (_, Idx::P, Idx::H) => {
@@ -105,7 +103,7 @@ pub fn utf8_to_cologne_codes(bytes: &[u8], outbuf: &mut Vec<CologneCode>) {
                 }
                 // Uncertain C
                 (
-                    Idx::STOP,
+                    Idx::SPACE,
                     Idx::C,
                     Idx::A | Idx::H | Idx::K | Idx::L | Idx::O | Idx::Q | Idx::R | Idx::U | Idx::X,
                 ) => {
@@ -117,7 +115,7 @@ pub fn utf8_to_cologne_codes(bytes: &[u8], outbuf: &mut Vec<CologneCode>) {
                 (_, Idx::C, Idx::A | Idx::H | Idx::K | Idx::O | Idx::Q | Idx::U | Idx::X) => {
                     cologne_code_push(CologneCode::Class8, outbuf);
                 }
-                (Idx::STOP, Idx::C, _) => {
+                (Idx::SPACE, Idx::C, _) => {
                     cologne_code_push(CologneCode::Class8, outbuf);
                 }
                 (_, Idx::C, _) => {
@@ -132,15 +130,13 @@ pub fn utf8_to_cologne_codes(bytes: &[u8], outbuf: &mut Vec<CologneCode>) {
         let res = *CHARACTER_TO_CODE
             .get(usize::from(b))
             .unwrap_or_else(|| unreachable!());
+
+        // eprintln!("res: {res} b: {b} last: {last:?}");
         match res {
             // Correct code already
-            0 if last[1] == 26 => {
+            0 => {
                 let c: CologneCode = unsafe { mem::transmute(res) };
                 cologne_code_push(c, outbuf);
-            }
-            0 => {
-                // Zeroes not after space are ignored
-                ()
             }
             1..=8 => {
                 let c: CologneCode = unsafe { mem::transmute(res) };
@@ -156,6 +152,9 @@ pub fn utf8_to_cologne_codes(bytes: &[u8], outbuf: &mut Vec<CologneCode>) {
                 }
             },
             11 => {}
+            14 => {
+                cologne_code_push(CologneCode::Space, outbuf);
+            }
             _ => {
                 prev_uncertain = true;
             }
@@ -165,7 +164,18 @@ pub fn utf8_to_cologne_codes(bytes: &[u8], outbuf: &mut Vec<CologneCode>) {
 }
 
 fn cologne_code_push(code: CologneCode, outbuf: &mut Vec<CologneCode>) {
+    // Zero codes not after space must be overwritten
     if !outbuf.last().map(|val| *val == code).unwrap_or(false) {
+        match outbuf.get(outbuf.len().saturating_sub(2) .. outbuf.len()) {
+            Some(&[CologneCode::Space, CologneCode::Class0]) => {
+                ()
+            }
+            Some(&[_, CologneCode::Class0]) => {
+                *outbuf.last_mut().unwrap_or_else(|| unreachable!()) = code;
+                return;
+            }
+            _ => ()
+        }
         outbuf.push(code)
     }
 }
@@ -249,7 +259,7 @@ impl Idx {
     const X: u8 = 23;
     const Y: u8 = 24;
     const Z: u8 = 25;
-    const STOP: u8 = 26;
+    const SPACE: u8 = 26;
 }
 
 #[cfg(test)]
@@ -352,6 +362,52 @@ mod test {
             outbuf,
             vec![
                 CologneCode::Space
+            ]
+        )
+    }
+
+    #[test]
+    fn special_char_spam2() {
+        let mut outbuf = Vec::new();
+        utf8_to_cologne_codes(
+            "a!\"#$%&'()*+,-./0123456789:;<=>?@[\\]^_`{|}~a`".as_bytes(),
+             &mut outbuf
+        );
+        assert_eq!(
+            outbuf,
+            vec![
+                CologneCode::Class0,
+                CologneCode::Space,
+                CologneCode::Class0,
+            ]
+        )
+    }
+
+    #[test]
+    fn grundlagen() {
+        let mut outbuf = Vec::new();
+        utf8_to_cologne_codes(
+            "Anhand von Grundlagen".as_bytes(),
+             &mut outbuf
+        );
+        assert_eq!(
+            outbuf,
+            vec![
+                CologneCode::Class0,
+                CologneCode::Class6,
+                CologneCode::Class6,
+                CologneCode::Class2,
+                CologneCode::Space,
+                CologneCode::Class3,
+                CologneCode::Class6,
+                CologneCode::Space,
+                CologneCode::Class4,
+                CologneCode::Class7,
+                CologneCode::Class6,
+                CologneCode::Class2,
+                CologneCode::Class5,
+                CologneCode::Class4,
+                CologneCode::Class6,
             ]
         )
     }

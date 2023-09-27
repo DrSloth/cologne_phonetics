@@ -10,3 +10,9 @@ unsafe_opt = []
 
 [dependencies]
 
+[[example]]
+name = "cologne_cat"
+opt-level = 3
+codegen-units = 1
+lto = "fat"
+
