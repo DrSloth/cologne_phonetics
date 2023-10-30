@@ -19,14 +19,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "cologne_codes"
+name = "cologne_phonetics"
 version = "0.1.0"
 
 [[package]]
-name = "cologne_codes-fuzz"
+name = "cologne_phonetics-fuzz"
 version = "0.0.0"
 dependencies = [
- "cologne_codes",
+ "cologne_phonetics",
  "libfuzzer-sys",
 ]
 

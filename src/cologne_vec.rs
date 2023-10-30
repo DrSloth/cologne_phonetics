@@ -9,7 +9,7 @@ use crate::*;
 /// to reduce memory usage and improve cache locality.
 #[derive(Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct CologneVec {
-    /// Number of stored cologne_codes this should never overflow as 
+    /// Number of stored cologne_phonetics this should never overflow as 
     /// self.inner.len() < isize::MAX is guaranteed
     len: usize,
     /// The inner buffer of this `CologneVec`

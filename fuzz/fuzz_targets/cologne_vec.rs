@@ -1,6 +1,6 @@
 #![no_main]
 
-use cologne_codes::CologneVec;
+use cologne_phonetics::CologneVec;
 use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|data: &[u8]| {

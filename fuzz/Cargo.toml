@@ -1,5 +1,5 @@
 [package]
-name = "cologne_codes-fuzz"
+name = "cologne_phonetics-fuzz"
 version = "0.0.0"
 publish = false
 edition = "2021"
@@ -10,7 +10,7 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 
-[dependencies.cologne_codes]
+[dependencies.cologne_phonetics]
 path = ".."
 
 # Prevent this from interfering with workspaces

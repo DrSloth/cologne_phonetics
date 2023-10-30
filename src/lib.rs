@@ -1,12 +1,12 @@
 //! Implementation of cologne codes or "Kölner Phonetik" see https://en.wikipedia.org/wiki/Cologne_phonetics
 //! for more information.
 //!
-//! This crate is mainly used by either calling [`utf8_to_cologne_codes_vec`] or preferably creating
+//! This crate is mainly used by either calling [`utf8_to_cologne_phonetics_vec`] or preferably creating
 //! a `CologneVec` and using its [`read_from_utf8`](CologneVec::read_from_utf8) function.
 //!
 //! # Example
 //! ```
-//! # use cologne_codes::{CologneVec, CologneCode};
+//! # use cologne_phonetics::{CologneVec, CologneCode};
 //! let mut buf = CologneVec::new();
 //! buf.read_from_utf8("Marius Macher".as_bytes());
 //! assert_eq!(buf, CologneVec::from_codes(&[
@@ -30,7 +30,7 @@ mod cologne_vec;
 mod tests;
 
 pub use cologne_vec::CologneVec;
-pub use string::utf8_to_cologne_codes_string;
+pub use string::utf8_to_cologne_phonetics_string;
 
 use alloc::vec::Vec;
 use core::{hint, mem};
@@ -69,7 +69,7 @@ macro_rules! array_slide {
 }
 
 /// One iteration of the algorithm to be useable in both the [`CologneVec`] and the
-/// [`utf8_to_cologne_codes_vec`] function
+/// [`utf8_to_cologne_phonetics_vec`] function
 macro_rules! iter {
     ($byte: ident, $utf8:ident, $last:ident, $prev_uncertain:ident, $cologne_code_push:path, $outbuf:ident) => {
         'blk: {
@@ -202,7 +202,7 @@ pub(crate) use array_slide;
 pub(crate) use iter;
 
 /// Read the given utf8 bytes into the `outbuf`. Generally you should prefer using a [`CologneVec`]
-pub fn utf8_to_cologne_codes_vec(bytes: &[u8], outbuf: &mut Vec<CologneCode>) {
+pub fn utf8_to_cologne_phonetics_vec(bytes: &[u8], outbuf: &mut Vec<CologneCode>) {
     let mut utf8 = false;
     // All values are interpreted as a normal alphabetic character and this maps to their alphabet
     // index, most ascii punctuation and whitespace characters are 26 and count as a stop

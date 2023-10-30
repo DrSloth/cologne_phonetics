@@ -1,11 +1,11 @@
-//! Tests for generation of cologne_codes
+//! Tests for generation of cologne_phonetics
 
 use super::*;
 
 #[test]
 fn wikipedia() {
     let mut outbuf = Vec::new();
-    utf8_to_cologne_codes_vec(b"Wikipedia", &mut outbuf);
+    utf8_to_cologne_phonetics_vec(b"Wikipedia", &mut outbuf);
     let outbuf = cologne_code_vec_to_bytevec(outbuf);
     assert_eq!(
         outbuf,
@@ -21,7 +21,7 @@ fn wikipedia() {
 #[test]
 fn mueller_luedenscheidt() {
     let mut outbuf = Vec::new();
-    utf8_to_cologne_codes_vec("Müller-Lüdenscheidt".as_bytes(), &mut outbuf);
+    utf8_to_cologne_phonetics_vec("Müller-Lüdenscheidt".as_bytes(), &mut outbuf);
     let outbuf = cologne_code_vec_to_bytevec(outbuf);
     assert_eq!(
         outbuf,
@@ -42,7 +42,7 @@ fn mueller_luedenscheidt() {
 #[test]
 fn breschnew() {
     let mut outbuf = Vec::new();
-    utf8_to_cologne_codes_vec("Breschnew".as_bytes(), &mut outbuf);
+    utf8_to_cologne_phonetics_vec("Breschnew".as_bytes(), &mut outbuf);
     let outbuf = cologne_code_vec_to_bytevec(outbuf);
     assert_eq!(
         outbuf,
@@ -59,7 +59,7 @@ fn breschnew() {
 #[test]
 fn veni_vidi_vici() {
     let mut outbuf = Vec::new();
-    utf8_to_cologne_codes_vec("Er kam, Er sah, Er siegte".as_bytes(), &mut outbuf);
+    utf8_to_cologne_phonetics_vec("Er kam, Er sah, Er siegte".as_bytes(), &mut outbuf);
     let outbuf = cologne_code_vec_to_bytevec(outbuf);
     assert_eq!(
         outbuf,
@@ -94,7 +94,7 @@ fn veni_vidi_vici() {
 #[test]
 fn special_char_spam() {
     let mut outbuf = Vec::new();
-    utf8_to_cologne_codes_vec(
+    utf8_to_cologne_phonetics_vec(
         "!\"#$%&'()*+,-./0123456789:;<=>?@[\\]^_`{|}~`".as_bytes(),
         &mut outbuf,
     );
@@ -105,7 +105,7 @@ fn special_char_spam() {
 #[test]
 fn special_char_spam2() {
     let mut outbuf = Vec::new();
-    utf8_to_cologne_codes_vec(
+    utf8_to_cologne_phonetics_vec(
         "a!\"#$%&'()*+,-./0123456789:;<=>?@[\\]^_`{|}~a`".as_bytes(),
         &mut outbuf,
     );
@@ -123,7 +123,7 @@ fn special_char_spam2() {
 #[test]
 fn grundlagen() {
     let mut outbuf = Vec::new();
-    utf8_to_cologne_codes_vec("Anhand von Grundlagen".as_bytes(), &mut outbuf);
+    utf8_to_cologne_phonetics_vec("Anhand von Grundlagen".as_bytes(), &mut outbuf);
     let outbuf = cologne_code_vec_to_bytevec(outbuf);
     assert_eq!(
         outbuf,
@@ -150,7 +150,7 @@ fn grundlagen() {
 #[test]
 fn hacico() {
     let mut outbuf = Vec::new();
-    utf8_to_cologne_codes_vec("Hacico".as_bytes(), &mut outbuf);
+    utf8_to_cologne_phonetics_vec("Hacico".as_bytes(), &mut outbuf);
     let outbuf = cologne_code_vec_to_bytevec(outbuf);
     assert_eq!(
         outbuf,
@@ -165,7 +165,7 @@ fn hacico() {
 #[test]
 fn aho_aho() {
     let mut outbuf = Vec::new();
-    utf8_to_cologne_codes_vec("aho aho".as_bytes(), &mut outbuf);
+    utf8_to_cologne_phonetics_vec("aho aho".as_bytes(), &mut outbuf);
     let outbuf = cologne_code_vec_to_bytevec(outbuf);
     assert_eq!(
         outbuf,
@@ -180,7 +180,7 @@ fn aho_aho() {
 #[test]
 fn aho_aho_aho() {
     let mut outbuf = Vec::new();
-    utf8_to_cologne_codes_vec("aho aho aho".as_bytes(), &mut outbuf);
+    utf8_to_cologne_phonetics_vec("aho aho aho".as_bytes(), &mut outbuf);
     let outbuf = cologne_code_vec_to_bytevec(outbuf);
     assert_eq!(
         outbuf,
@@ -197,7 +197,7 @@ fn aho_aho_aho() {
 #[test]
 fn aro_aro() {
     let mut outbuf = Vec::new();
-    utf8_to_cologne_codes_vec("aro aro".as_bytes(), &mut outbuf);
+    utf8_to_cologne_phonetics_vec("aro aro".as_bytes(), &mut outbuf);
     let outbuf = cologne_code_vec_to_bytevec(outbuf);
     assert_eq!(
         outbuf,
@@ -214,7 +214,7 @@ fn aro_aro() {
 #[test]
 fn alphabet() {
     let mut outbuf = Vec::new();
-    utf8_to_cologne_codes_vec(
+    utf8_to_cologne_phonetics_vec(
         "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z".as_bytes(),
         &mut outbuf,
     );
@@ -274,7 +274,7 @@ fn alphabet() {
     ];
     assert_eq!(outbuf, resvec);
     let mut outbuf_little = Vec::new();
-    utf8_to_cologne_codes_vec(
+    utf8_to_cologne_phonetics_vec(
         "a b c d e f g h i j k l m n o p q r s t u v w x y z".as_bytes(),
         &mut outbuf_little,
     );
