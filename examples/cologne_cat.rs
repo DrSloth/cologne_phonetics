@@ -12,14 +12,11 @@ fn run<R: Read>(r: &mut R) {
     let mut cont = Vec::new();
     r.read_to_end(&mut cont).unwrap();
     let mut stdout = std::io::stdout().lock();
-    // let mut outbuf = Vec::with_capacity(8381266);
-    let mut outbuf = Vec::new();
+    let mut outbuf = cologne_codes::CologneVec::new();
     let pre = std::time::Instant::now();
-    cologne_codes::utf8_to_cologne_codes(&cont, &mut outbuf);
+    outbuf.read_from_utf8(&cont);
     eprintln!("Took: {:?}", pre.elapsed());
-    for code in outbuf {
-        write!(stdout, "{}", code).unwrap();
-    }
+    writeln!(stdout, "{:?}", outbuf).unwrap();
     stdout.write_all(b"\n").unwrap();
     stdout.flush().unwrap();
 }

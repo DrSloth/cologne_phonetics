@@ -1,0 +1,40 @@
+[package]
+name = "cologne_codes-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.cologne_codes]
+path = ".."
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "cologne_vec"
+path = "fuzz_targets/cologne_vec.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "colognecodes_vec"
+path = "fuzz_targets/colognecodes_vec.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "cologne_string"
+path = "fuzz_targets/cologne_string.rs"
+test = false
+doc = false
+
